@@ -1,29 +1,33 @@
-require 'mechanize'
-require 'dotenv/load'
-def login()
-	login = ENV['TRAINLINE_LOGIN']
-	password = ENV['TRAINLINE_PASSWORD']
-	@mechanize.get('https://www.trainline.fr/signin') do |page|
-		page.forms.first do |f|
-			f.email = login
-			f.password = password
-			submit.first.click
-		end
-	end
-	puts "User is now logged in" if @verbose == true
+require 'csv'
+
+def csv_to_array(string)
+	string = string.chomp
+	string = string.gsub(';', ',')
+    csv = CSV::parse(string)
+    fields = csv.shift
+    fields = fields.map {|f| f.downcase.gsub(" ", "_")}
+    csv.collect { |record| Hash[*fields.zip(record).flatten ] } 
 end
 
-if (ARGV[0] && ARGV[1] && ARGV[2])
-	@mechanize = Mechanize.new
-	origin_city = ARGV[0]
-	destination_city = ARGV[1]
-	date_departure = ARGV[2]
-	@verbose = true if ARGV[3] == "VERBOSE"
-	booked = false
-	base_url = "https://www.trainline.fr/search/"
-	search_url = base_url + origin_city + "/" + destination_city + "/" + date_departure
-	puts search_url
-	login()
-else
-	puts "usage : ruby checkfulltrain.rb 'origin city' 'destination city' 'date departure'"
+def trainline_query
+	departure_station = ARGV[0]
+	arrival_station = ARGV[1]
+	from_date = ARGV[2]
+	to_date = ARGV[3]
+
+	query = "python3 main.py \'#{departure_station}\' \'#{arrival_station}\' \'#{from_date}\' \'#{to_date}\'"
+	result = `#{query}`
 end
+
+def tgvmax_checker(trips)
+	trips.each do |trip|
+		return trip if trip["price"] == "0"
+	end
+	return NULL
+end
+
+query_result = trainline_query
+trips = csv_to_array(query_result)
+free_trip = tgvmax_checker(trips)
+puts free_trip unless free_trip.nil?
+
