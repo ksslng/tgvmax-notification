@@ -1,4 +1,18 @@
+# TODO: add_trip_to_list if argv.length == 4
+
 require 'csv'
+require 'json'
+
+def save_array_to_json_file(array, json_file)
+	file = File.open(json_file, "w")
+	file.write(array.to_json)
+	file.close
+end
+
+def read_json_file(json_file)
+	file = File.read(json_file)
+	data = JSON.parse(file)
+end
 
 def csv_to_array(string)
 	string = string.chomp
@@ -50,12 +64,16 @@ def search_loop(trips_to_search) #work in progress
 			puts "Toutes les recherches ont permis de trouver des TGVMAX disponible"
 		end
 	end
-end
+	end
 
 trips_to_search = []
 trip1 = {:departure_station => "Toulouse" , :arrival_station => "Bordeaux", :from_date => "14/05/2019 08:00", :to_date => "14/05/2019 21:00"}
 trips_to_search.push(trip1)
 trip2 = {:departure_station => ARGV[0] , :arrival_station => ARGV[1], :from_date => ARGV[2], :to_date => ARGV[3]}
 trips_to_search.push(trip2)
+puts trips_to_search
+save_array_to_json_file(trips_to_search, "trips_to_search.json")
 
+#trips_to_search = read_json_file("trips_to_search.json")
+#puts trips_to_search
 search_loop(trips_to_search)
