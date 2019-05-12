@@ -31,6 +31,17 @@ def add_trip_to_list(trips_to_search, departure_station, arrival_station, from_d
 	newtrip = {"departure_station" => departure_station , "arrival_station" => arrival_station, "from_date" => from_date, "to_date" => to_date}
 	trips_to_search.push(newtrip)
 	save_array_to_json_file(trips_to_search, @json_file_path)
+	puts "Le trajet a ete ajoute"
+end
+
+def remove_trip_from_list(trips_to_search, departure_station, arrival_station, from_date, to_date)
+	trip_to_delete = {"departure_station" => departure_station , "arrival_station" => arrival_station, "from_date" => from_date, "to_date" => to_date}
+	if trips_to_search.delete(trip_to_delete)
+		save_array_to_json_file(trips_to_search, @json_file_path)
+		puts "Le trajet a ete supprime"
+	else
+		puts "erreur lors de la suppression"
+	end
 end
 
 def csv_to_array(string)
@@ -87,7 +98,8 @@ end
 
 @json_file_path = "trips_to_search.json"
 trips_to_search = read_json_file(@json_file_path)
-add_trip_to_list(trips_to_search, ARGV[0], ARGV[1], ARGV[2], ARGV[3]) if (ARGV.length == 4)
+add_trip_to_list(trips_to_search, ARGV[1], ARGV[2], ARGV[3], ARGV[4]) if (ARGV.length == 5 && ARGV[0].downcase == "add")
+remove_trip_from_list(trips_to_search, ARGV[1], ARGV[2], ARGV[3], ARGV[4]) if (ARGV.length == 5 && ARGV[0].downcase == "remove")
 abort("Aucun trajet dans la liste d'attente. Le programme va quitter") if trips_to_search.empty?
 puts "La recherche va commencer"
 search_loop(trips_to_search)
