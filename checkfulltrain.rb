@@ -2,11 +2,26 @@
 
 require 'csv'
 require 'json'
+require 'net/http'
+require 'dotenv/load'
 
 def save_array_to_json_file(array, json_file)
 	file = File.open(json_file, "w")
 	file.write(array.to_json)
 	file.close
+end
+
+def send_email_ifttt(departure_station, arrival_station, departure_date)
+	response = Net::HTTP.post_form(
+		URI('https://maker.ifttt.com/trigger/tgvmax/with/key/' + ENV['IFTTT']),
+		'value1' => departure_station,
+		'value2' => arrival_station,
+		'value3' => departure_date,
+	)
+
+	if response.code != '200'
+		puts 'Not OK (non-200 status code received)'
+	end
 end
 
 def read_json_file(json_file)
@@ -55,7 +70,7 @@ def search_loop(trips_to_search) #work in progress
 				#Notification action
 				puts "Le train suivant est disponible : "
 				puts free_trip
-				#puts "delete index #{index}"
+				send_email_ifttt(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
 				trips_to_search.delete(trip_to_search)
 				save_array_to_json_file(trips_to_search, @json_file_path)
 			else
@@ -84,6 +99,6 @@ save_array_to_json_file(trips_to_search, "trips_to_search.json")
 trips_to_search = read_json_file(@json_file_path)
 add_trip_to_list(trips_to_search, ARGV[0], ARGV[1], ARGV[2], ARGV[3]) if (ARGV.length == 4)
 abort("Aucun trajet dans la liste d'attente. Le programme va quitter") if trips_to_search.empty?
-
+puts "La recherche va commencer"
 #puts trips_to_search
 search_loop(trips_to_search)
