@@ -1,5 +1,3 @@
-# TODO: add_trip_to_list if argv.length == 4
-
 require 'csv'
 require 'json'
 require 'net/http'
@@ -51,7 +49,7 @@ def trainline_query(requested_trip)
 	to_date = requested_trip["to_date"]
 
 	query = "python3 main.py \'#{departure_station}\' \'#{arrival_station}\' \'#{from_date}\' \'#{to_date}\'"
-	result = `#{query}`
+	`#{query}`
 end
 
 def tgvmax_checker(trips)
@@ -61,13 +59,13 @@ def tgvmax_checker(trips)
 	return false
 end
 
-def search_loop(trips_to_search) #work in progress
+def search_loop(trips_to_search)
 	while(!trips_to_search.empty?) do
 		trips_to_search.each do |trip_to_search|
+				puts "Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			query_result = trainline_query(trip_to_search)
 			search_results = csv_to_array(query_result)
 			if (free_trip = tgvmax_checker(search_results))
-				#Notification action
 				puts "Le train suivant est disponible : "
 				puts free_trip
 				send_email_ifttt(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
@@ -86,19 +84,10 @@ def search_loop(trips_to_search) #work in progress
 		end
 	end
 end
-=begin
-trips_to_search = []
-trip1 = {"departure_station" => "Toulouse" , "arrival_station => "Bordeaux", "from_date" => "14/05/2019 08:00", "to_date" => "14/05/2019 21:00"}
-trips_to_search.push(trip1)
-trip2 = {:departure_station => ARGV[0] , :arrival_station => ARGV[1], :from_date => ARGV[2], :to_date => ARGV[3]}
-trips_to_search.push(trip2)
-puts trips_to_search
-save_array_to_json_file(trips_to_search, "trips_to_search.json")
-=end
+
 @json_file_path = "trips_to_search.json"
 trips_to_search = read_json_file(@json_file_path)
 add_trip_to_list(trips_to_search, ARGV[0], ARGV[1], ARGV[2], ARGV[3]) if (ARGV.length == 4)
 abort("Aucun trajet dans la liste d'attente. Le programme va quitter") if trips_to_search.empty?
 puts "La recherche va commencer"
-#puts trips_to_search
 search_loop(trips_to_search)
