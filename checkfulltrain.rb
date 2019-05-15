@@ -2,11 +2,22 @@ require 'csv'
 require 'json'
 require 'net/http'
 require 'dotenv/load'
+require 'telerivet'
 
 def save_array_to_json_file(array, json_file)
 	file = File.open(json_file, "w")
 	file.write(array.to_json)
 	file.close
+end
+
+def send_sms_telerivet(departure_station, arrival_station, departure_date)
+	tr = Telerivet::API.new(ENV['TELERIVET_API_KEY'])
+	project = tr.init_project_by_id(ENV['TELERIVET_PROJECT_ID'])
+
+	sent_msg = project.send_message({
+	    'content' => "TGVMAX : Un trajet a été trouvé pour le trajet #{departure_station} - #{arrival_station}. Le train partira à #{departure_date}",
+		'to_number' => ENV['SMS_RECEIVER_NUMBER']
+	})
 end
 
 def send_email_ifttt(departure_station, arrival_station, departure_date)
@@ -80,6 +91,7 @@ def search_loop(trips_to_search)
 				puts "Le train suivant est disponible : "
 				puts free_trip
 				send_email_ifttt(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
+				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
 				trips_to_search.delete(trip_to_search)
 				save_array_to_json_file(trips_to_search, @json_file_path)
 			else
@@ -87,7 +99,7 @@ def search_loop(trips_to_search)
 			end
 		end
 		if (!trips_to_search.empty?)
-			puts "Prochaine recherche dans une heure"
+			puts "\nProchaine recherche dans une heure\n"
 			sleep(3600)
 		else
 			puts "Toutes les recherches ont permis de trouver des TGVMAX disponible"
