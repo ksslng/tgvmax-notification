@@ -3,6 +3,7 @@ require 'json'
 require 'net/http'
 require 'dotenv/load'
 require 'telerivet'
+require 'shorturl'
 
 def save_array_to_json_file(array, json_file)
 	file = File.open(json_file, "w")
@@ -10,13 +11,17 @@ def save_array_to_json_file(array, json_file)
 	file.close
 end
 
-def send_sms_telerivet(departure_station, arrival_station, departure_date)
+
+
+def send_sms_telerivet(departure_station, arrival_station, departure_date, number)
+	url = "https://www.trainline.fr/search/#{departure_station}/#{arrival_station}"
+	url = ShortURL.shorten(url)
 	tr = Telerivet::API.new(ENV['TELERIVET_API_KEY'])
 	project = tr.init_project_by_id(ENV['TELERIVET_PROJECT_ID'])
-
+	
 	sent_msg = project.send_message({
-	    'content' => "TGVMAX : Un trajet a été trouvé pour le trajet #{departure_station} - #{arrival_station}. Le train partira à #{departure_date}",
-		'to_number' => ENV['SMS_RECEIVER_NUMBER']
+	    'content' => "TGVMAX : Un trajet a été trouvé pour le trajet #{departure_station} - #{arrival_station}. Le train partira à #{departure_date}. #{url}",
+		'to_number' => number
 	})
 end
 
@@ -86,12 +91,14 @@ def search_loop(trips_to_search)
 		trips_to_search.each do |trip_to_search|
 				puts "Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			query_result = trainline_query(trip_to_search)
+			next if query_result.nil?
 			search_results = csv_to_array(query_result)
 			if (free_trip = tgvmax_checker(search_results))
 				puts "Le train suivant est disponible : "
 				puts free_trip
 				send_email_ifttt(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
-				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
+				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"], ENV['SMS_RECEIVER_NUMBER'])
+				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"],ENV['SMS_RECEIVER_NUMBER_2'])
 				trips_to_search.delete(trip_to_search)
 				save_array_to_json_file(trips_to_search, @json_file_path)
 			else
