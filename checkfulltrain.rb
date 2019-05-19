@@ -4,6 +4,7 @@ require 'net/http'
 require 'dotenv/load'
 require 'telerivet'
 require 'shorturl'
+require 'date'
 
 def save_array_to_json_file(array, json_file)
 	file = File.open(json_file, "w")
@@ -89,7 +90,7 @@ end
 def search_loop(trips_to_search)
 	while(!trips_to_search.empty?) do
 		trips_to_search.each do |trip_to_search|
-				puts "Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
+				puts Time.now.strftime("%H:%M") + " Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			query_result = trainline_query(trip_to_search)
 			next if query_result.nil?
 			search_results = csv_to_array(query_result)
@@ -102,11 +103,11 @@ def search_loop(trips_to_search)
 				trips_to_search.delete(trip_to_search)
 				save_array_to_json_file(trips_to_search, @json_file_path)
 			else
-				puts "Aucun train dispo de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
+				puts Time.now.strftime("%H:%M") + " Aucun train dispo de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			end
 		end
 		if (!trips_to_search.empty?)
-			puts "\nProchaine recherche dans une heure\n"
+			puts Time.now.strftime("%H:%M") + " Prochaine recherche dans une heure\n\n"
 			sleep(3600)
 		else
 			puts "Toutes les recherches ont permis de trouver des TGVMAX disponible"
