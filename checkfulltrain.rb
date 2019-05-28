@@ -87,12 +87,23 @@ def tgvmax_checker(trips)
 	return false
 end
 
+def clean_if_outdated(trips_to_search, trip_to_search)
+	if Date.today > Date.parse(trip_to_search['from_date'])
+		puts "Trajet supprimme car deja passe : " + trip_to_search.to_s
+		trips_to_search.delete(trip_to_search)
+		save_array_to_json_file(trips_to_search, @json_file_path)
+	end
+end
+
 def search_loop(trips_to_search)
 	while(!trips_to_search.empty?) do
 		trips_to_search.each do |trip_to_search|
-				puts Time.now.strftime("%H:%M") + " Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
+			puts Time.now.strftime("%H:%M") + " Recherche d'un train de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			query_result = trainline_query(trip_to_search)
-			next if query_result.nil?
+			if (query_result.nil?)
+				puts Time.now.strftime("%H:%M") +  " Response from Trainline is nil"
+				next
+			end
 			search_results = csv_to_array(query_result)
 			if (free_trip = tgvmax_checker(search_results))
 				puts "Le train suivant est disponible : "
@@ -105,6 +116,7 @@ def search_loop(trips_to_search)
 			else
 				puts Time.now.strftime("%H:%M") + " Aucun train dispo de #{trip_to_search["departure_station"]} a #{trip_to_search["arrival_station"]} entre le #{trip_to_search["from_date"]} et #{trip_to_search["to_date"]}"
 			end
+			clean_if_outdated(trips_to_search, trip_to_search)
 		end
 		if (!trips_to_search.empty?)
 			puts Time.now.strftime("%H:%M") + " Prochaine recherche dans une heure\n\n"
