@@ -5,6 +5,7 @@ require 'dotenv/load'
 require 'telerivet'
 require 'shorturl'
 require 'date'
+require 'time'
 
 def save_array_to_json_file(array, json_file)
 	file = File.open(json_file, "w")
@@ -12,14 +13,21 @@ def save_array_to_json_file(array, json_file)
 	file.close
 end
 
+def trainline_date_generator(departure_date)
+	temp_time = Time.parse(departure_date)
+	temp_time.strftime("%Y-%m-%d-%H:%M")
+end
 
+def url_generator(departure_station, arrival_station, departure_date)
+	tl_departure_date = trainline_date_generator(departure_date)
+	url = "https://www.trainline.fr/search/#{departure_station}/#{arrival_station}/#{tl_departure_date}"
+	ShortURL.shorten(url)
+end
 
 def send_sms_telerivet(departure_station, arrival_station, departure_date, number)
-	url = "https://www.trainline.fr/search/#{departure_station}/#{arrival_station}"
-	url = ShortURL.shorten(url)
 	tr = Telerivet::API.new(ENV['TELERIVET_API_KEY'])
 	project = tr.init_project_by_id(ENV['TELERIVET_PROJECT_ID'])
-	
+	url = url_generator(departure_station, arrival_station, departure_date)
 	sent_msg = project.send_message({
 	    'content' => "TGVMAX : Un trajet a été trouvé pour le trajet #{departure_station} - #{arrival_station}. Le train partira à #{departure_date}. #{url}",
 		'to_number' => number
@@ -27,11 +35,12 @@ def send_sms_telerivet(departure_station, arrival_station, departure_date, numbe
 end
 
 def send_email_ifttt(departure_station, arrival_station, departure_date)
+	tl_departure_date = trainline_date_generator(departure_date)
 	response = Net::HTTP.post_form(
 		URI('https://maker.ifttt.com/trigger/tgvmax/with/key/' + ENV['IFTTT']),
 		'value1' => departure_station,
 		'value2' => arrival_station,
-		'value3' => departure_date,
+		'value3' => tl_departure_date,
 	)
 
 	if response.code != '200'
