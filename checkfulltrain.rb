@@ -2,7 +2,6 @@ require 'csv'
 require 'json'
 require 'net/http'
 require 'dotenv/load'
-require 'telerivet'
 require 'shorturl'
 require 'date'
 require 'time'
@@ -24,20 +23,10 @@ def url_generator(departure_station, arrival_station, departure_date)
 	ShortURL.shorten(url)
 end
 
-def send_sms_telerivet(departure_station, arrival_station, departure_date, number)
-	tr = Telerivet::API.new(ENV['TELERIVET_API_KEY'])
-	project = tr.init_project_by_id(ENV['TELERIVET_PROJECT_ID'])
-	url = url_generator(departure_station, arrival_station, departure_date)
-	sent_msg = project.send_message({
-	    'content' => "TGVMAX : Un trajet a été trouvé pour le trajet #{departure_station} - #{arrival_station}. Le train partira à #{departure_date}. #{url}",
-		'to_number' => number
-	})
-end
-
 def send_email_ifttt(departure_station, arrival_station, departure_date)
 	tl_departure_date = trainline_date_generator(departure_date)
 	response = Net::HTTP.post_form(
-		URI('https://maker.ifttt.com/trigger/tgvmax/with/key/' + ENV['IFTTT']),
+		URI('https://maker.ifttt.com/trigger/place_available/with/key/' + ENV['IFTTT']),
 		'value1' => departure_station,
 		'value2' => arrival_station,
 		'value3' => tl_departure_date,
@@ -118,8 +107,6 @@ def search_loop(trips_to_search)
 				puts "Le train suivant est disponible : "
 				puts free_trip
 				send_email_ifttt(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"])
-				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"], ENV['SMS_RECEIVER_NUMBER'])
-				send_sms_telerivet(trip_to_search["departure_station"],trip_to_search["arrival_station"], free_trip["departure_date"],ENV['SMS_RECEIVER_NUMBER_2'])
 				trips_to_search.delete(trip_to_search)
 				save_array_to_json_file(trips_to_search, @json_file_path)
 			else
